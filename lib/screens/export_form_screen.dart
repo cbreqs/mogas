@@ -100,7 +100,6 @@ class _ExportFormScreenState extends ConsumerState<ExportFormScreen> {
     setState(() => _generating = true);
 
     final receipts = await db.getAllReceipts();
-      (_taxYear).containsDateString(r.date)).length}');
     final doc = await Form4923HGenerator.generate(
       profile: profile,
       vehicles: vehicles,
