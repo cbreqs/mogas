@@ -5,6 +5,9 @@ import '../models/vehicle.dart';
 
 /// SQLite database for persisting vehicles and receipts.
 /// Profile sensitive fields are handled separately via flutter_secure_storage.
+/// 
+/// NOTE: Receipt dates are stored as MM/DD/YYYY strings. All fiscal year
+/// filtering is done in Dart after fetching, not in SQL.
 class AppDatabase {
   AppDatabase._();
   static final AppDatabase instance = AppDatabase._();
@@ -85,18 +88,6 @@ class AppDatabase {
     await db.delete('vehicles', where: 'vin = ?', whereArgs: [vin]);
   }
 
-  /// Reassigns all receipts from [fromVin] to [toVin] without deleting [fromVin].
-  /// Reassigns a single receipt to a different vehicle.
-  Future<void> moveReceipt(int receiptId, String toVin) async {
-    final db = await database;
-    await db.update(
-      'receipts',
-      {'vehicleId': toVin},
-      where: 'id = ?',
-      whereArgs: [receiptId],
-    );
-  }
-
   Future<void> moveReceipts(String fromVin, String toVin) async {
     final db = await database;
     await db.update(
@@ -107,8 +98,18 @@ class AppDatabase {
     );
   }
 
-  /// Reassigns all receipts from [fromVin] to [toVin], then deletes [fromVin].
-  Future<void> moveReceiptsAndDeleteVehicle(String fromVin, String toVin) async {
+  Future<void> moveReceipt(int receiptId, String toVin) async {
+    final db = await database;
+    await db.update(
+      'receipts',
+      {'vehicleId': toVin},
+      where: 'id = ?',
+      whereArgs: [receiptId],
+    );
+  }
+
+  Future<void> moveReceiptsAndDeleteVehicle(
+      String fromVin, String toVin) async {
     final db = await database;
     await db.update(
       'receipts',
@@ -163,7 +164,6 @@ class AppDatabase {
     await db.delete('receipts', where: 'id = ?', whereArgs: [id]);
   }
 
-  /// All unique seller names across all receipts, sorted alphabetically.
   Future<List<String>> getUniqueSellers() async {
     final db = await database;
     final rows = await db.rawQuery(
@@ -172,7 +172,6 @@ class AppDatabase {
     return rows.map((r) => r['sellerName'] as String).toList();
   }
 
-  /// All unique seller cities across all receipts, sorted alphabetically.
   Future<List<String>> getUniqueCities() async {
     final db = await database;
     final rows = await db.rawQuery(
@@ -181,7 +180,6 @@ class AppDatabase {
     return rows.map((r) => r['sellerCity'] as String).toList();
   }
 
-  /// All unique seller ZIP codes across all receipts, sorted.
   Future<List<String>> getUniqueZips() async {
     final db = await database;
     final rows = await db.rawQuery(
@@ -190,21 +188,60 @@ class AppDatabase {
     return rows.map((r) => r['sellerZip'] as String).toList();
   }
 
-  /// Total eligible gallons across all eligible vehicles (≤26,000 lbs)
-  Future<double> totalEligibleGallons() async {
+  /// Total eligible gallons across all eligible vehicles (≤26,000 lbs).
+  /// 
+  /// [startDate] and [endDate] are DateTime objects for fiscal year filtering.
+  /// Filtering is done in Dart because dates are stored as MM/DD/YYYY strings.
+  Future<double> totalEligibleGallons({
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
     final db = await database;
+
+    // Fetch all receipts joined with eligible vehicles
     final rows = await db.rawQuery('''
-      SELECT SUM(CAST(r.gallons AS REAL)) as total
+      SELECT r.gallons, r.date
       FROM receipts r
       JOIN vehicles v ON r.vehicleId = v.vin
       WHERE v.underWeightLimit = 1
     ''');
-    return (rows.first['total'] as num?)?.toDouble() ?? 0.0;
+
+    double total = 0.0;
+    for (final row in rows) {
+      final dateStr = row['date'] as String? ?? '';
+      if (startDate != null || endDate != null) {
+        final d = _parseMmDdYyyy(dateStr);
+        if (d == null) continue;
+        if (startDate != null && d.isBefore(startDate)) continue;
+        if (endDate != null && d.isAfter(endDate)) continue;
+      }
+      total += double.tryParse(row['gallons'] as String? ?? '') ?? 0.0;
+    }
+    return total;
   }
 
-  /// Estimated refund: totalEligibleGallons × $0.125
-  Future<double> estimatedRefund() async {
-    final gallons = await totalEligibleGallons();
+  Future<double> estimatedRefund({
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
+    final gallons =
+        await totalEligibleGallons(startDate: startDate, endDate: endDate);
     return gallons * 0.125;
+  }
+
+  /// Parses a MM/DD/YYYY date string to DateTime. Returns null on failure.
+  static DateTime? _parseMmDdYyyy(String dateStr) {
+    if (dateStr.isEmpty) return null;
+    try {
+      final parts = dateStr.split('/');
+      if (parts.length == 3) {
+        return DateTime(
+          int.parse(parts[2]), // year
+          int.parse(parts[0]), // month
+          int.parse(parts[1]), // day
+        );
+      }
+    } catch (_) {}
+    return null;
   }
 }

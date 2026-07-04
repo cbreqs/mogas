@@ -68,12 +68,18 @@ class HomeScreen extends ConsumerWidget {
                 _ActionCard(
                   icon: Icons.document_scanner_outlined,
                   label: 'Scan Receipt',
-                  onTap: () => Navigator.pushNamed(context, '/scan-receipt'),
+                  onTap: () async {
+                    await Navigator.pushNamed(context, '/scan-receipt');
+                    ref.invalidate(refundSummaryProvider);
+                  },
                 ),
                 _ActionCard(
                   icon: Icons.add_box_outlined,
                   label: 'Add Receipt',
-                  onTap: () => Navigator.pushNamed(context, '/add-receipt'),
+                  onTap: () async {
+                    await Navigator.pushNamed(context, '/add-receipt');
+                    ref.invalidate(refundSummaryProvider);
+                  },
                 ),
                 _ActionCard(
                   icon: Icons.directions_car_outlined,
@@ -204,8 +210,7 @@ class _SetupStep extends StatelessWidget {
                       style: const TextStyle(
                           fontWeight: FontWeight.w600, fontSize: 14)),
                   Text(detail,
-                      style:
-                          TextStyle(fontSize: 12, color: col.mutedText)),
+                      style: TextStyle(fontSize: 12, color: col.mutedText)),
                 ],
               ),
             ),
@@ -270,7 +275,11 @@ class _RefundCard extends StatelessWidget {
   }
 }
 
+// ── Filing Window Banner ──────────────────────────────────────────────────────
+
 class _FilingWindowBanner extends StatelessWidget {
+  static const _amber = Color(0xFFB45309);
+
   @override
   Widget build(BuildContext context) {
     final now = DateTime.now();
@@ -281,21 +290,19 @@ class _FilingWindowBanner extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
         color: isOpen
-            ? context.col.crimson.withValues(alpha: 0.1)
+            ? _amber.withValues(alpha: 0.12)
             : surface,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
             color: isOpen
-                ? context.col.crimson.withValues(alpha: 0.4)
+                ? _amber.withValues(alpha: 0.45)
                 : Theme.of(context).dividerColor),
       ),
       child: Row(
         children: [
           Icon(
             isOpen ? Icons.notifications_active : Icons.schedule,
-            color: isOpen
-                ? context.col.crimson
-                : context.col.mutedText,
+            color: isOpen ? _amber : context.col.mutedText,
             size: 18,
           ),
           const SizedBox(width: 10),
@@ -306,9 +313,7 @@ class _FilingWindowBanner extends StatelessWidget {
                   : 'Filing window: July 1 – September 30, 2026. Eligible receipts: July 1, 2025 – June 30, 2026.',
               style: TextStyle(
                 fontSize: 13,
-                color: isOpen
-                    ? context.col.crimson
-                    : context.col.labelText,
+                color: isOpen ? _amber : context.col.labelText,
                 fontWeight: isOpen ? FontWeight.w600 : FontWeight.normal,
               ),
             ),
@@ -318,6 +323,8 @@ class _FilingWindowBanner extends StatelessWidget {
     );
   }
 }
+
+// ── Action Card ───────────────────────────────────────────────────────────────
 
 class _ActionCard extends StatelessWidget {
   final IconData icon;

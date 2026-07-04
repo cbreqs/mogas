@@ -7,6 +7,7 @@ import '../data/database.dart';
 import '../models/vehicle.dart';
 import '../models/fuel_receipt.dart';
 import '../models/profile.dart';
+import '../services/fiscal_year.dart';
 
 // ── Theme mode ────────────────────────────────────────────────────────────────
 
@@ -40,8 +41,6 @@ final themeModeProvider =
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-/// VIN used for the auto-created placeholder vehicle on first launch.
-/// Check against this to decide whether setup is still incomplete.
 const kDefaultVehicleVin = 'MY-VEHICLE-001';
 
 // ── Database ──────────────────────────────────────────────────────────────────
@@ -71,8 +70,6 @@ class ProfileNotifier extends StateNotifier<Profile> {
         ? Profile.fromPrefsJson(jsonDecode(raw) as Map<String, dynamic>)
         : const Profile();
 
-    // Migration: if old plaintext blob still contains sensitive keys, move them
-    // to secure storage and strip them from prefs.
     if (raw != null) {
       final oldJson = jsonDecode(raw) as Map<String, dynamic>;
       final legacyKeys = _sensitiveKeys.where((k) => oldJson.containsKey(k));
@@ -88,7 +85,6 @@ class ProfileNotifier extends StateNotifier<Profile> {
       }
     }
 
-    // Read sensitive fields from secure storage and merge.
     final secure = <String, String>{};
     for (final k in _sensitiveKeys) {
       final val = await _secureStorage.read(key: k);
@@ -125,8 +121,6 @@ class VehicleNotifier extends StateNotifier<AsyncValue<List<Vehicle>>> {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() => _db.getVehicles());
 
-    // First launch: seed a placeholder so the scanner works immediately.
-    // The home screen shows a "Getting Started" guide until this is replaced.
     if (state.value?.isEmpty == true) {
       final prefs = await SharedPreferences.getInstance();
       if (prefs.getBool('default_vehicle_created') != true) {
@@ -220,15 +214,20 @@ final receiptProvider = StateNotifierProvider.family<ReceiptNotifier,
 
 // ── Refund summary ────────────────────────────────────────────────────────────
 
-/// Live refund estimate across all eligible vehicles.
+/// Live refund estimate scoped to the current fiscal year.
 /// Rate: $0.125/gallon (Missouri motor fuel tax increase, Section 142.822)
 final refundSummaryProvider = FutureProvider<RefundSummary>((ref) async {
   final db = ref.watch(dbProvider);
-  final gallons = await db.totalEligibleGallons();
+  final fy = FiscalYear.current;
+  final gallons = await db.totalEligibleGallons(
+    startDate: fy.start,
+    endDate: fy.end,
+  );
   return RefundSummary(
     totalEligibleGallons: gallons,
     estimatedRefund: gallons * 0.125,
     ratePerGallon: 0.125,
+    fiscalYear: fy,
   );
 });
 
@@ -236,10 +235,12 @@ class RefundSummary {
   final double totalEligibleGallons;
   final double estimatedRefund;
   final double ratePerGallon;
+  final FiscalYear fiscalYear;
 
   const RefundSummary({
     required this.totalEligibleGallons,
     required this.estimatedRefund,
     required this.ratePerGallon,
+    required this.fiscalYear,
   });
 }

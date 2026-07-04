@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'app/theme.dart';
 import 'screens/home_screen.dart';
+import 'screens/about_screen.dart';
 import 'screens/export_form_screen.dart';
 import 'screens/vehicle_form_screen.dart';
 import 'screens/vehicle_list_screen.dart';
@@ -61,6 +62,7 @@ class MogasApp extends ConsumerWidget {
         '/profile': (context) => const ProfileScreen(),
         '/edit-receipt': (context) => const EditReceiptScreen(),
         '/view-image': (context) => const ReceiptImageViewer(),
+        '/about': (context) => const AboutScreen(),
       },
     );
   }

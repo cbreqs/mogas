@@ -134,6 +134,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       appBar: AppBar(
         title: const Text('My Profile'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.info_outline),
+            tooltip: 'About',
+            onPressed: () => Navigator.pushNamed(context, '/about'),
+          ),
           TextButton(
             onPressed: _saving ? null : _save,
             child: _saving
@@ -353,6 +358,44 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     () => _bankAccountType = s.isEmpty ? null : s.first),
               ),
             ],
+
+            const SizedBox(height: 32),
+
+            // ── About ────────────────────────────────────────────────────
+            InkWell(
+              onTap: () => Navigator.pushNamed(context, '/about'),
+              borderRadius: BorderRadius.circular(8),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                decoration: BoxDecoration(
+                  color: context.col.cardSurface,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: context.col.subtleBorder),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline, size: 20, color: context.col.primary),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('About MOgas MOmoney',
+                              style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 14,
+                                  color: context.col.onSurface)),
+                          Text('Program info, links, privacy policy',
+                              style: TextStyle(
+                                  fontSize: 12, color: context.col.mutedText)),
+                        ],
+                      ),
+                    ),
+                    Icon(Icons.chevron_right, size: 18, color: context.col.mutedText),
+                  ],
+                ),
+              ),
+            ),
 
             const SizedBox(height: 32),
 

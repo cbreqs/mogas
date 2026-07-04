@@ -6,6 +6,7 @@ import 'package:printing/printing.dart';
 import '../app/theme.dart' show MogasColors, mogasTheme, mogasDarkTheme, MogasColors2;
 import '../models/profile.dart';
 import '../providers/providers.dart';
+import '../services/fiscal_year.dart';
 import '../services/form_4923h_generator.dart';
 
 class ExportFormScreen extends ConsumerStatefulWidget {
@@ -19,9 +20,8 @@ class _ExportFormScreenState extends ConsumerState<ExportFormScreen> {
   bool _generating = false;
   bool _disclaimerAccepted = false;
 
-  // Filing period: the year prior to the July–Sept filing window.
-  // e.g. filing in 2026 covers fuel purchased in 2025.
-  int get _taxYear => DateTime.now().year - 1;
+  // Use FiscalYear.current so this is always correct regardless of calendar year
+  int get _taxYear => FiscalYear.current.taxYear;
 
   Future<bool> _showDisclaimer() async {
     final accepted = await showDialog<bool>(
@@ -100,6 +100,7 @@ class _ExportFormScreenState extends ConsumerState<ExportFormScreen> {
     setState(() => _generating = true);
 
     final receipts = await db.getAllReceipts();
+      (_taxYear).containsDateString(r.date)).length}');
     final doc = await Form4923HGenerator.generate(
       profile: profile,
       vehicles: vehicles,
@@ -341,7 +342,10 @@ class _Stat extends StatelessWidget {
               color: Colors.white,
             )),
         const SizedBox(height: 2),
-        Text(label, style: TextStyle(fontSize: 11, color: context.col.onPrimary.withValues(alpha: 0.6))),
+        Text(label,
+            style: TextStyle(
+                fontSize: 11,
+                color: context.col.onPrimary.withValues(alpha: 0.6))),
       ],
     );
   }
@@ -364,6 +368,7 @@ class _SummaryCardShimmer extends StatelessWidget {
 }
 
 class _FilingWindowBanner extends StatelessWidget {
+  static const _amber = Color(0xFFB45309);
   final int taxYear;
   const _FilingWindowBanner({required this.taxYear});
 
@@ -371,24 +376,22 @@ class _FilingWindowBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     final now = DateTime.now();
     final isOpen = now.month >= 7 && now.month <= 9;
-
     final col = context.col;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: isOpen
-            ? col.crimson.withValues(alpha: 0.1)
-            : col.subtleFill,
+        color: isOpen ? _amber.withValues(alpha: 0.12) : col.subtleFill,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: isOpen ? col.crimson.withValues(alpha: 0.5) : col.divider,
+          color: isOpen ? _amber.withValues(alpha: 0.45) : col.divider,
         ),
       ),
       child: Row(
         children: [
           Icon(
             isOpen ? Icons.event_available : Icons.event_outlined,
-            color: isOpen ? col.crimson : col.mutedText,
+            color: isOpen ? _amber : col.mutedText,
             size: 18,
           ),
           const SizedBox(width: 10),
@@ -399,7 +402,7 @@ class _FilingWindowBanner extends StatelessWidget {
                   : 'Filing window: July 1 – September 30, 2026. Eligible receipts: July 1, 2025 – June 30, 2026.',
               style: TextStyle(
                 fontSize: 12,
-                color: isOpen ? col.crimson : col.labelText,
+                color: isOpen ? _amber : col.labelText,
                 fontWeight: isOpen ? FontWeight.w600 : FontWeight.normal,
               ),
             ),

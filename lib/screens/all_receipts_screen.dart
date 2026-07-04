@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/fuel_receipt.dart';
 import '../models/vehicle.dart';
 import '../providers/providers.dart';
+import '../services/fiscal_year.dart';
 import '../app/theme.dart';
 
 enum _SortField { date, gallons, vehicle }
@@ -24,12 +25,13 @@ class _AllReceiptsScreenState extends ConsumerState<AllReceiptsScreen> {
 
   @override
   void initState() {
-  super.initState();
-  // Refresh receipts every time this screen is opened
-  Future.microtask(() => ref.invalidate(_allReceiptsProvider));
+    super.initState();
+    // Refresh receipts every time this screen is opened
+    Future.microtask(() => ref.invalidate(_allReceiptsProvider));
   }
 
-  List<FuelReceipt> _sorted(List<FuelReceipt> receipts, Map<String, Vehicle> vehicleMap) {
+  List<FuelReceipt> _sorted(
+      List<FuelReceipt> receipts, Map<String, Vehicle> vehicleMap) {
     final list = [...receipts];
     list.sort((a, b) {
       int cmp;
@@ -59,6 +61,19 @@ class _AllReceiptsScreenState extends ConsumerState<AllReceiptsScreen> {
     });
   }
 
+  /// Returns the fiscal year label for a receipt date string (MM/DD/YYYY),
+  /// e.g. "FY2026 · Jul 2025 – Jun 2026"
+  String _fyLabel(String dateStr) {
+    final fyYear = FiscalYear.fyYearForDateString(dateStr);
+    if (fyYear == null) return 'Unknown Year';
+    return 'FY$fyYear  ·  Jul ${fyYear - 1} – Jun $fyYear';
+  }
+
+  String _fyKey(String dateStr) {
+    final fyYear = FiscalYear.fyYearForDateString(dateStr);
+    return fyYear?.toString() ?? '0';
+  }
+
   @override
   Widget build(BuildContext context) {
     final receiptsAsync = ref.watch(_allReceiptsProvider);
@@ -76,12 +91,20 @@ class _AllReceiptsScreenState extends ConsumerState<AllReceiptsScreen> {
           IconButton(
             icon: const Icon(Icons.document_scanner_outlined),
             tooltip: 'Scan receipt',
-            onPressed: () => Navigator.pushNamed(context, '/scan-receipt'),
+            onPressed: () async {
+              await Navigator.pushNamed(context, '/scan-receipt');
+              ref.invalidate(_allReceiptsProvider);
+              ref.invalidate(refundSummaryProvider);
+            },
           ),
           IconButton(
             icon: const Icon(Icons.add),
             tooltip: 'Add receipt manually',
-            onPressed: () => Navigator.pushNamed(context, '/add-receipt'),
+            onPressed: () async {
+              await Navigator.pushNamed(context, '/add-receipt');
+              ref.invalidate(_allReceiptsProvider);
+              ref.invalidate(refundSummaryProvider);
+            },
           ),
         ],
       ),
@@ -96,7 +119,8 @@ class _AllReceiptsScreenState extends ConsumerState<AllReceiptsScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.receipt_long, size: 56,
+                    Icon(Icons.receipt_long,
+                        size: 56,
                         color: col.mutedText.withValues(alpha: 0.5)),
                     const SizedBox(height: 16),
                     Text('No receipts yet.',
@@ -119,6 +143,19 @@ class _AllReceiptsScreenState extends ConsumerState<AllReceiptsScreen> {
               receipts.fold<double>(0, (s, r) => s + r.gallonsValue);
           final totalRefund = totalGallons * 0.125;
 
+          // Group receipts by fiscal year for dividers
+          // Build a flat list of items: either a header string or a receipt
+          final items = <dynamic>[];
+          String? lastFyKey;
+          for (final r in sorted) {
+            final fyKey = _fyKey(r.date);
+            if (fyKey != lastFyKey) {
+              items.add(_fyLabel(r.date)); // header
+              lastFyKey = fyKey;
+            }
+            items.add(r);
+          }
+
           return Column(
             children: [
               // Summary bar
@@ -131,7 +168,8 @@ class _AllReceiptsScreenState extends ConsumerState<AllReceiptsScreen> {
                     Expanded(
                       child: Text(
                         '${receipts.length} receipt${receipts.length == 1 ? '' : 's'}',
-                        style: TextStyle(color: col.onPrimary, fontSize: 13),
+                        style:
+                            TextStyle(color: col.onPrimary, fontSize: 13),
                       ),
                     ),
                     Column(
@@ -168,31 +206,76 @@ class _AllReceiptsScreenState extends ConsumerState<AllReceiptsScreen> {
                         style: TextStyle(
                             fontSize: 12, color: col.labelText)),
                     const SizedBox(width: 8),
-                    _SortChip(label: 'Date', field: _SortField.date,
-                        current: _sortField, ascending: _sortAscending, onTap: _setSort),
+                    _SortChip(
+                        label: 'Date',
+                        field: _SortField.date,
+                        current: _sortField,
+                        ascending: _sortAscending,
+                        onTap: _setSort),
                     const SizedBox(width: 6),
-                    _SortChip(label: 'Gallons', field: _SortField.gallons,
-                        current: _sortField, ascending: _sortAscending, onTap: _setSort),
+                    _SortChip(
+                        label: 'Gallons',
+                        field: _SortField.gallons,
+                        current: _sortField,
+                        ascending: _sortAscending,
+                        onTap: _setSort),
                     const SizedBox(width: 6),
-                    _SortChip(label: 'Vehicle', field: _SortField.vehicle,
-                        current: _sortField, ascending: _sortAscending, onTap: _setSort),
+                    _SortChip(
+                        label: 'Vehicle',
+                        field: _SortField.vehicle,
+                        current: _sortField,
+                        ascending: _sortAscending,
+                        onTap: _setSort),
                   ],
                 ),
               ),
 
-              // Receipt list
+              // Receipt list with fiscal year dividers
               Expanded(
                 child: ListView.builder(
                   padding: const EdgeInsets.only(bottom: 80),
-                  itemCount: sorted.length,
+                  itemCount: items.length,
                   itemBuilder: (context, i) {
-                    final r = sorted[i];
+                    final item = items[i];
+                    if (item is String) {
+                      // Fiscal year header divider
+                      return Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Divider(
+                                  color: col.subtleBorder, thickness: 1),
+                            ),
+                            const SizedBox(width: 10),
+                            Text(
+                              item,
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: col.mutedText,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Divider(
+                                  color: col.subtleBorder, thickness: 1),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+                    final r = item as FuelReceipt;
                     final vehicle = vehicleMap[r.vehicleId];
                     return _ReceiptTile(
-                        receipt: r, vehicle: vehicle, onRefresh: () {
-                      ref.invalidate(_allReceiptsProvider);
-                      ref.invalidate(refundSummaryProvider);
-                    });
+                      receipt: r,
+                      vehicle: vehicle,
+                      onRefresh: () {
+                        ref.invalidate(_allReceiptsProvider);
+                        ref.invalidate(refundSummaryProvider);
+                      },
+                    );
                   },
                 ),
               ),
@@ -212,8 +295,11 @@ class _SortChip extends StatelessWidget {
   final void Function(_SortField) onTap;
 
   const _SortChip({
-    required this.label, required this.field, required this.current,
-    required this.ascending, required this.onTap,
+    required this.label,
+    required this.field,
+    required this.current,
+    required this.ascending,
+    required this.onTap,
   });
 
   @override
@@ -283,14 +369,15 @@ class _ReceiptTile extends StatelessWidget {
       child: ListTile(
         leading: CircleAvatar(
           backgroundColor: col.primary.withValues(alpha: 0.15),
-          child: Icon(Icons.local_gas_station, color: col.primary, size: 20),
+          child:
+              Icon(Icons.local_gas_station, color: col.primary, size: 20),
         ),
         title: Text(receipt.sellerName,
             style: const TextStyle(fontWeight: FontWeight.w600)),
         subtitle: Text(
           '${receipt.date}  ·  ${receipt.gallons} gal  ·  ${receipt.fuelType.displayName}\n'
           '$vehicleLabel',
-          style: TextStyle(fontSize: 12),
+          style: const TextStyle(fontSize: 12),
         ),
         isThreeLine: true,
         trailing: Column(
@@ -308,8 +395,8 @@ class _ReceiptTile extends StatelessWidget {
                 style: TextStyle(fontSize: 11, color: col.mutedText)),
           ],
         ),
-        onTap: () => Navigator.pushNamed(context, '/edit-receipt',
-            arguments: receipt),
+        onTap: () =>
+            Navigator.pushNamed(context, '/edit-receipt', arguments: receipt),
       ),
     );
   }

@@ -59,7 +59,7 @@ class _MogasColorTokens {
 class MogasColors {
   MogasColors._();
 
-  // ── Light mode ───────────────────────────────────────────────────────────
+  // ── Light mode ────────────────────────────────────────────────────────────
   static const Color accent        = Color(0xFF0D9B6A); // Emerald — deeper for light bg
   static const Color red           = Color(0xFFDC2626); // Red 600
   static const Color scaffoldLight = Color(0xFFEEF2F5); // Cool blue-gray off-white
@@ -70,7 +70,7 @@ class MogasColors {
   // so the app feels cohesive — one colour does the work.
   static const Color primaryLight  = accent;
 
-  // ── Dark mode ────────────────────────────────────────────────────────────
+  // ── Dark mode ─────────────────────────────────────────────────────────────
   static const Color scaffoldDark  = Color(0xFF06141B); // Deepest — Swissborg swatch 1
   static const Color surfaceDark   = Color(0xFF11212D); // Dark navy  — swatch 2
   static const Color cardDark      = Color(0xFF1C3347); // Slightly lighter — swatch 3
@@ -171,12 +171,12 @@ final mogasTheme = ThemeData(
     color: Color(0xFFDDE4EA),
   ),
   textTheme: const TextTheme(
-    headlineLarge:  TextStyle(color: MogasColors.onLight,      fontWeight: FontWeight.bold, fontSize: 28),
-    headlineMedium: TextStyle(color: MogasColors.onLight,      fontWeight: FontWeight.bold, fontSize: 22),
-    titleLarge:     TextStyle(color: MogasColors.onLight,      fontWeight: FontWeight.w600, fontSize: 18),
-    bodyLarge:      TextStyle(color: MogasColors.onLight,      fontSize: 16),
-    bodyMedium:     TextStyle(color: MogasColors.onLight,      fontSize: 14),
-    labelLarge:     TextStyle(color: MogasColors.onDark,       fontWeight: FontWeight.w600, fontSize: 16),
+    headlineLarge:  TextStyle(color: MogasColors.onLight, fontWeight: FontWeight.bold, fontSize: 28),
+    headlineMedium: TextStyle(color: MogasColors.onLight, fontWeight: FontWeight.bold, fontSize: 22),
+    titleLarge:     TextStyle(color: MogasColors.onLight, fontWeight: FontWeight.w600, fontSize: 18),
+    bodyLarge:      TextStyle(color: MogasColors.onLight, fontSize: 16),
+    bodyMedium:     TextStyle(color: MogasColors.onLight, fontSize: 14),
+    labelLarge:     TextStyle(color: MogasColors.onDark,  fontWeight: FontWeight.w600, fontSize: 16),
   ),
 );
 
@@ -189,9 +189,9 @@ final mogasDarkTheme = ThemeData(
   colorScheme: ColorScheme(
     brightness:   Brightness.dark,
     primary:      MogasColors.accentDark,
-    onPrimary:    MogasColors.scaffoldDark,
+    onPrimary:    MogasColors.onDark,        // WHITE — readable on green buttons
     secondary:    MogasColors.accentDark,
-    onSecondary:  MogasColors.scaffoldDark,
+    onSecondary:  MogasColors.onDark,
     tertiary:     MogasColors.redDark,
     onTertiary:   MogasColors.onDark,
     error:        MogasColors.redDark,
@@ -209,7 +209,7 @@ final mogasDarkTheme = ThemeData(
   elevatedButtonTheme: ElevatedButtonThemeData(
     style: ElevatedButton.styleFrom(
       backgroundColor: MogasColors.accentDark,
-      foregroundColor: MogasColors.scaffoldDark,
+      foregroundColor: MogasColors.onDark,   // WHITE text on green buttons
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
     ),
@@ -223,7 +223,7 @@ final mogasDarkTheme = ThemeData(
   ),
   floatingActionButtonTheme: const FloatingActionButtonThemeData(
     backgroundColor: MogasColors.accentDark,
-    foregroundColor: MogasColors.scaffoldDark,
+    foregroundColor: MogasColors.onDark,     // WHITE icon on green FAB
   ),
   inputDecorationTheme: InputDecorationTheme(
     border: OutlineInputBorder(
@@ -266,6 +266,6 @@ final mogasDarkTheme = ThemeData(
     titleLarge:     TextStyle(color: MogasColors.onDarkSurface, fontWeight: FontWeight.w600, fontSize: 18),
     bodyLarge:      TextStyle(color: MogasColors.onDarkSurface, fontSize: 16),
     bodyMedium:     TextStyle(color: MogasColors.onDarkSurface, fontSize: 14),
-    labelLarge:     TextStyle(color: MogasColors.scaffoldDark,  fontWeight: FontWeight.w600, fontSize: 16),
+    labelLarge:     TextStyle(color: MogasColors.onDarkSurface, fontWeight: FontWeight.w600, fontSize: 16),
   ),
 );
