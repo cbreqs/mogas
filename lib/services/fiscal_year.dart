@@ -47,16 +47,21 @@ class FiscalYear {
   /// Tax year integer used on the form, e.g. 2026
   int get taxYear => year;
 
-  /// Parses a date string in MM/DD/YYYY format to a DateTime.
+  /// Parses a date string in MM/DD/YYYY or MM-DD-YYYY format to a DateTime.
+  /// Also handles 2-digit years (e.g. 10/22/25 → 2025).
   /// Returns null if parsing fails.
   static DateTime? parseDateString(String dateStr) {
     if (dateStr.isEmpty) return null;
     try {
-      final parts = dateStr.split('/');
+      // Normalize separators — accept both / and -
+      final normalized = dateStr.replaceAll('-', '/');
+      final parts = normalized.split('/');
       if (parts.length == 3) {
         final month = int.parse(parts[0]);
         final day = int.parse(parts[1]);
-        final year = int.parse(parts[2]);
+        var year = int.parse(parts[2]);
+        // Handle 2-digit years: assume 2000s
+        if (year < 100) year += 2000;
         return DateTime(year, month, day);
       }
     } catch (_) {}

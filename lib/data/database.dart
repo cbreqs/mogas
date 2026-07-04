@@ -229,14 +229,19 @@ class AppDatabase {
     return gallons * 0.125;
   }
 
-  /// Parses a MM/DD/YYYY date string to DateTime. Returns null on failure.
+  /// Parses a MM/DD/YYYY or MM-DD-YYYY date string to DateTime.
+  /// Also handles 2-digit years (e.g. 10/22/25 → 2025).
+  /// Returns null on failure.
   static DateTime? _parseMmDdYyyy(String dateStr) {
     if (dateStr.isEmpty) return null;
     try {
-      final parts = dateStr.split('/');
+      final normalized = dateStr.replaceAll('-', '/');
+      final parts = normalized.split('/');
       if (parts.length == 3) {
+        var year = int.parse(parts[2]);
+        if (year < 100) year += 2000;
         return DateTime(
-          int.parse(parts[2]), // year
+          year,
           int.parse(parts[0]), // month
           int.parse(parts[1]), // day
         );
