@@ -51,5 +51,7 @@
 	<string>Used to scan fuel receipts</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Used to select fuel receipt images</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+<false/>
 </dict>
 </plist>
